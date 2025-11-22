@@ -2,10 +2,11 @@ name: Sync to GitLab
 
 on:
   push:
+  delete:
   workflow_dispatch:
   pull_request:
-  schedule:
-    - cron: '0 17 * * *'
+  #schedule:
+    #- cron: '0 16 * * *'
 
 jobs:
   sync:
@@ -15,6 +16,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Create local branches for all remotes
+        run: |
+          git fetch origin
+          for branch in $(git branch -r | grep -v 'origin/HEAD' | sed 's|origin/||'); do
+            git branch --track "$branch" "origin/$branch" || true
+          done
 
       - name: Unprotect current branch on GitLab before push
         env:
@@ -35,9 +43,11 @@ jobs:
           git config --global user.name "tuthanika-bot"
           git config --global user.email "tuthanika@gmail.com"
           git remote add gitlab https://oauth2:${GITLAB_TOKEN}@gitlab.com/${{ github.repository }}.git
-          current_branch=$(git rev-parse --abbrev-ref HEAD)
-          git push --force gitlab "$current_branch:$current_branch"
-
+          git push --force --all gitlab
+          
+#          current_branch=$(git rev-parse --abbrev-ref HEAD)
+#          git push --force gitlab "$current_branch:$current_branch"
+          
       - name: Delete workflow runs
         uses: Mattraks/delete-workflow-runs@v2
         with:
